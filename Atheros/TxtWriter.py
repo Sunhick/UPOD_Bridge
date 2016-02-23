@@ -47,11 +47,11 @@ class TxtWriter(object):
       else: dev = 'sda1'
 
       mountpath =  os.path.join(dev, 'arduino') #'{device}/arduino/'.format(device=dev)
-      mount =  os.path.join(mountpath, 'mount.txt')
+      # mount =  os.path.join(mountpath, 'mount.txt')
       upodfile = os.path.join(mountpath, self.filename)
 
-      if not os.path.exists(mount):
-        return None
+      # if not os.path.exists(mount):
+      #  return None
 
       exists = os.path.exists(upodfile)
       stream = open(upodfile, 'a')
