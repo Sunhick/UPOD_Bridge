@@ -130,16 +130,30 @@ void loop() {
   char LEDstatus[1];
   Bridge.get("status", LEDstatus, 1);
   Serial.println(LEDstatus[0]);
-  while (LEDstatus[0] == 'F'){
+  while (LEDstatus[0] == 'A'){ //No SD or USB detected
     #if SerialStream
     Serial.println("SD write unsuccessful. Check if SD is inserted properly.");
     #endif
     Bridge.get("status", LEDstatus, 1);
     digitalWrite(10,HIGH); //figure out what pin corresponds to red led
     digitalWrite(11,HIGH);
+    delay(10);
   }
-  if (LEDstatus[0] == 'T'){
-    //SD write successful
+  if (LEDstatus[0] == 'B'){ //SD detected, USB not detected
+    //digitalWrite(10,HIGH); //figure out what pin corresponds to green led
+    digitalWrite(11,HIGH);
+    delay(500);
+    //digitalWrite(10, LOW);
+    digitalWrite(11,LOW);
+  }
+  else if (LEDstatus[0] == 'C'){ //SD not detected, USB detected
+    digitalWrite(10,HIGH); //figure out what pin corresponds to green led
+    //digitalWrite(11,HIGH);
+    delay(500);
+    digitalWrite(10, LOW);
+    //digitalWrite(11,LOW);
+  }
+  else if (LEDstatus[0] == 'D'){ //SD and USB both detected
     digitalWrite(10,HIGH); //figure out what pin corresponds to green led
     digitalWrite(11,HIGH);
     delay(500);
