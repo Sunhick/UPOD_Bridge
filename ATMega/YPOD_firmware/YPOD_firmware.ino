@@ -7,10 +7,10 @@
 #include <mcp3424.h>
 #include <Adafruit_ADS1015.h>
 
-#define SerialStream 0
-#define GPS_used 0
-#define MetStation 0
-#define QuadStat  0 //auxillary 4-stat array, uses 2 MCP3424s
+#define SerialStream 1
+#define GPS_used 1
+#define MetStation 1
+#define QuadStat  1 //auxillary 4-stat array, uses 2 MCP3424s
 //UPOD model indicator. Modify the 4th and 5th character to denote which UPOD you are using.
 #define model "UPODXY" 
 
@@ -127,8 +127,26 @@ SIGNAL(TIMER0_COMPA_vect) {
 #endif
 
 void loop() {
-  String data;
   char LEDstatus[1];
+  Bridge.get("status", LEDstatus, 1);
+  Serial.println(LEDstatus[0]);
+  while (LEDstatus[0] == 'F'){
+    #if SerialStream
+    Serial.println("SD write unsuccessful. Check if SD is inserted properly.");
+    #endif
+    Bridge.get("status", LEDstatus, 1);
+    digitalWrite(10,HIGH); //figure out what pin corresponds to red led
+    digitalWrite(11,HIGH);
+  }
+  if (LEDstatus[0] == 'T'){
+    //SD write successful
+    digitalWrite(10,HIGH); //figure out what pin corresponds to green led
+    digitalWrite(11,HIGH);
+    delay(500);
+    digitalWrite(10, LOW);
+    digitalWrite(11,LOW);
+  }
+  String data;
   //Get time from RTC
   DateTime now = RTC.now();
 
@@ -162,28 +180,32 @@ void loop() {
     P = -99;
   }
 
-  data += model[4] + model[5] + delimiter + String(now.unixtime()) + delimiter + T + delimiter + P + delimiter +
+  data += /*model[4] + model[5] + delimiter + */ String(now.unixtime()) + delimiter + T + delimiter + P + delimiter +
           temperature_SHT + delimiter + humidity_SHT + delimiter +
-          String(getS300CO2()) + delimiter + String(analogRead(A0)) + delimiter;
+          String(getS300CO2()) + delimiter;
           
   #if MetStation
-  data += String(get_wind_speed())
+  data += String(get_wind_speed()) + delimiter + String(analogRead(A0)) + delimiter;
+  #else if
+  data += delimiter + delimiter;
   #endif
   
-  #if QuadStat
   //Read ADCs on-board and on-Quadstat
   for (int i = 1; i <= 16; i++) {
-    if (i <= 4) data += alpha_one.GetValue(i) + delimiter;
-    else if (i <= 8) data += alpha_two.GetValue(i - 4) + delimiter;
+    if (i <= 4) data += 
+    #if QuadStat
+    alpha_one.GetValue(i) + 
+    #endif
+    delimiter;
+    
+    else if (i <= 8) data += 
+    #if QuadStat
+      alpha_two.GetValue(i - 4) + 
+    #endif 
+    delimiter;
     else if (i <= 12) data += ads1.readADC_SingleEnded(i - 9) + delimiter;
     else if (i <= 16) data += ads2.readADC_SingleEnded(i - 13) + delimiter;
   }
-  #else
-  for (int i = 0; i <= 8; i++) {
-    if (i <= 3) data += ads1.readADC_SingleEnded(i) + delimiter;
-    else if (i <= 7) data += ads2.readADC_SingleEnded(i - 4) + delimiter;
-  }
-  #endif
   
   #if GPS_used
   //Get GPS data
@@ -204,21 +226,12 @@ void loop() {
   #endif
   
   Bridge.put("TX-channel", data);
-  Bridge.get("status", LEDstatus, 1);
-  while (LEDstatus == "a"){
-    Serial.print("SD write unsuccessful. Check if SD is inserted properly.");
-    Bridge.get("status", LEDstatus, 1);
-    digitalWrite(11,HIGH); //figure out what pin corresponds to red led
-    delay(100);
-    digitalWrite(11, LOW);
-  }
-  if (LEDstatus == "b"){
-    //SD write successful
-    digitalWrite(10,HIGH); //figure out what pin corresponds to green led
-    delay(100);
-    digitalWrite(10, LOW);
-  }
+ 
   //QuadStat takes 11 seconds to sample. No need for delay in main loop
+  #if QuadStat
+  #else
+  delay(2000);
+  #endif
 }
 
 float getS300CO2()  {
