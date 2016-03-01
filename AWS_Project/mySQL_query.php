@@ -1,11 +1,11 @@
-<?php echo "YPOD MYSQL data query and table display on website"; ?>
+<?php echo "YPOD mySQL Data Import and Display"; ?>
 
 <?php
 
 $servername = "localhost";
 $username = "root";
 $password = "root";
-$dbname = "YPOD_DB";
+$dbname = "YPOD";
 
 // Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);
@@ -14,8 +14,8 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 } 
 
-$sql = "INSERT INTO Temperature (Time, tempC, TempF)
-VALUES ('12:35', '12', '53')";
+$sql = "INSERT INTO Temperature (tempC, tempF, time)
+VALUES ('12', '53', '12:35')";
 
 if ($conn->query($sql) === TRUE) {
     echo "New record created successfully";
@@ -24,26 +24,11 @@ if ($conn->query($sql) === TRUE) {
 }
 
 $conn->close();
-?>
-
-<?php
-
-//make connection
-mysql_connect('localhost', 'root', 'root');
-
-//select db
-mysql_select_db('YPOD_DB');
-
-$sql2="SELECT * FROM Temperature";
-
-$records=mysql_query($sql2);
-
 ?>
-
 <html>
 
 <head>
-<title>YPOD: A Low-Cost Air Quality Monitoring Tool</title>
+<title>YPOD Data</title>
 </head>
 
 <body>
@@ -51,26 +36,31 @@ $records=mysql_query($sql2);
 <table width="600" border="1" cellpadding="1" cellspacing="1">
 <tr>
 
+<th>Temperature (Celcius)</th>
+<th>Temperature (Farenheight) </th>
 <th>Time</th>
-<th>C</th>
-<th>F</th>
 <tr>
-
 <?php
+$servername = "localhost";
+$username = "root";
+$password = "root";
+$dbname = "YPOD";
 
-while($Temperature=mysql_fetch_array($records)){
+$conn = new mysqli($servername, $username, $password, $dbname);
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+$sql2= "SELECT * FROM Temperature";
 
+$records=mysqli_query($conn, $sql2);
+while($Temperature=mysqli_fetch_assoc($records)){
 	echo "<tr>";
-
-	echo "<td>".$Temperature["Time"]."</td>";
-
 	echo "<td>".$Temperature["tempC"]."</td>";
-
 	echo "<td>".$Temperature["tempF"]."</td>";
-
+	echo "<td>".$Temperature["time"]."</td>";
 	echo "</tr>";
 }
-
 ?>
 
 </table>
