@@ -21,19 +21,19 @@ MILLIVOLTS_PER_BIT = .1875
 
 class SensorData(object):
     def __init__(self, tokens):
-        RTC_token = float(tokens[0])
+        RTC_token = self._getfloat(tokens[0])
         self.RtcDate = self._get_Unix2UTC_date(RTC_token)
         self.RtcTime = self._get_Unix2UTC_time(RTC_token)
 
-        self.BmpTemperature = float(tokens[1])
-        self.BmpPressure = float(tokens[2])
+        self.BmpTemperature = self._getfloat(tokens[1])
+        self.BmpPressure = self._getfloat(tokens[2])
 
-        self.Sht25Temperature = float(tokens[3])
-        self.Sht25Humidity = float(tokens[4])
+        self.Sht25Temperature = self._getfloat(tokens[3])
+        self.Sht25Humidity = self._getfloat(tokens[4])
 
-        self.CO2 = float(tokens[5])
+        self.CO2 = self._getfloat(tokens[5])
 
-        self.WindSpeed = float(tokens[6])
+        self.WindSpeed = self._getfloat(tokens[6])
         self.WindDirection = self.ConvertWindDirection(tokens[7])
 
         self.Quad_Aux1 = self._get_QuatStat_value(tokens[8])
@@ -55,6 +55,20 @@ class SensorData(object):
         self.E2VO3_Heat = self._get_ADC_value(tokens[22])
         self.E2VO3_Sens = self._get_ADC_value(tokens[23])
         self.GpsData = self._get_gps_data(tokens[24])
+
+        self.Dpin3 = self._getInt(tokens[25])
+        self.Dpin4 = self._getInt(tokens[26])
+        self.Dpin5 = self._getInt(tokens[27])
+
+    def _getInt(self, data):
+        if not data:
+            return None
+        return int(data)
+
+    def _getfloat(self, data):
+        if not data:
+            return None
+        return float(data)
 
     def _get_gps_data(self, gps_data):
         if not gps_data:

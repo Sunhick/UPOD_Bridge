@@ -33,7 +33,8 @@ class TxtWriter(object):
                        'Fig 280 Heat(milliVolts)', 'Fig 280 Sens(milliVolts)', 'BL Moccon sens(milliVolts)',
                        'ADC2 Channel-2(empty)', 'E2VO3 Heat(milliVolts)', 'E2VO3 Sens(milliVolts)',
                        'GPS Date', 'GPS Time(UTC)', 'Latitude','Longitude',
-                       'Fix Quality', 'Altitude(meters above sea level)', 'Statellites')
+                       'Fix Quality', 'Altitude(meters above sea level)', 'Statellites', 'Digital Pin-3(ADC Value)', 
+                       'Digital Pin-4(ADC Value)','Digital Pin-5(ADC Value)')
         self.filename = filename
 
 
@@ -47,11 +48,13 @@ class TxtWriter(object):
       else: dev = 'sda1'
 
       mountpath =  os.path.join(dev, 'arduino') #'{device}/arduino/'.format(device=dev)
-      # mount =  os.path.join(mountpath, 'mount.txt')
+      mount =  os.path.join(mountpath, 'mount.txt')
+      print 'mount:' , mount
       upodfile = os.path.join(mountpath, self.filename)
 
-      # if not os.path.exists(mount):
-      #  return None
+      if not os.path.exists(mount):
+        print 'no file'
+        return None
 
       exists = os.path.exists(upodfile)
       stream = open(upodfile, 'a')
@@ -103,7 +106,10 @@ class TxtWriter(object):
                                   sensor.GpsData.Longitude,
                                   sensor.GpsData.FixQuality,
                                   sensor.GpsData.Altitude,
-                                  sensor.GpsData.Satellites))
+                                  sensor.GpsData.Satellites,
+                                  sensor.Dpin3, 
+                                  sensor.Dpin4, 
+                                  sensor.Dpin5))
             return True
         except Exception, e:
             #self.log.exception(e)
