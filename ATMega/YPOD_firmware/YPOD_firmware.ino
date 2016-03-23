@@ -8,9 +8,10 @@
 #include <Adafruit_ADS1015.h>
 
 #define SerialStream 1
-#define GPS_used 1
-#define MetStation 1
-#define QuadStat  1 //auxillary 4-stat array, uses 2 MCP3424s
+#define GPS_used 0
+#define MetStation 0
+#define digitalSensors 0 //digital pins 3, 4, and 5 can be used for additional sensors.
+#define QuadStat  0 //auxillary 4-stat array, uses 2 MCP3424s
 //UPOD model indicator. Modify the 4th and 5th character to denote which UPOD you are using.
 #define model "UPODXY" 
 
@@ -21,6 +22,7 @@ RTC_DS3231 RTC;
 Adafruit_ADS1115 ads1;
 Adafruit_ADS1115 ads2(B1001001);
 int ADC1;
+
 
 #if QuadStat
 //Quadstat ADC instances and variables
@@ -84,6 +86,12 @@ void setup() {
   pinMode(11, OUTPUT);
   pinMode(10, OUTPUT);
   
+  #if digitalSensors
+  pinMode(3, INPUT);
+  pinMode(4, INPUT);
+  pinMode(5, INPUT);
+  #endif
+  
   #if QuadStat
   alpha_one.GetAddress('G', 'F'); //user defined address for the alphasense pstat array (4-stat)
   alpha_two.GetAddress('H', 'H') ;
@@ -127,21 +135,22 @@ SIGNAL(TIMER0_COMPA_vect) {
 #endif
 
 void loop() {
-  char LEDstatus[1];
+  char LEDstatus[1] = {'N'};
   Bridge.get("status", LEDstatus, 1);
   Serial.println(LEDstatus[0]);
-  while (LEDstatus[0] == 'F'){
+  while (LEDstatus[0] == 'F' || LEDstatus[0] == 'N'){ //No SD or USB detected
     #if SerialStream
     Serial.println("SD write unsuccessful. Check if SD is inserted properly.");
     #endif
     Bridge.get("status", LEDstatus, 1);
     digitalWrite(10,HIGH); //figure out what pin corresponds to red led
     digitalWrite(11,HIGH);
+    delay(10);
   }
-  if (LEDstatus[0] == 'T'){
-    //SD write successful
-    digitalWrite(10,HIGH); //figure out what pin corresponds to green led
+  if (LEDstatus[0] == 'T'){ //SD detected, USB not detected
+    //digitalWrite(10,HIGH); //figure out what pin corresponds to green led
     digitalWrite(11,HIGH);
+    digitalWrite(10, HIGH);
     delay(500);
     digitalWrite(10, LOW);
     digitalWrite(11,LOW);
@@ -214,11 +223,22 @@ void loop() {
   if (millis() - timer > 2000) {
     timer = millis();
     if (gps_available) {
-      data += gps_data;
+      data += gps_data + delimiter;
       gps_data = "";
       gps_available = false;
     }
   }
+  #else if
+  data += delimiter;
+  #endif
+  
+  #if digitalSensors
+  int digitalPin3 = digitalRead(3);
+  int digitalPin4 = digitalRead(4);
+  int digitalPin5 = digitalRead(5);
+  data += String(digitalPin3) + delimiter + String(digitalPin4) + delimiter + String(digitalPin5); 
+  #else if
+  data += delimiter + delimiter;
   #endif
   
   #if SerialStream
