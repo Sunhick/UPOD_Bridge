@@ -1,0 +1,8 @@
+div(class="row")
+  div(class="col-md-2")
+    .list-group
+      a.list-group-item(ui-sref='loggedin.upload') Upload data
+      a.list-group-item(ui-sref='loggedin.upload') Download data
+  div(class="col-md-10")
+    div(ui-view="maincontent")
+      | Default Content goes here
