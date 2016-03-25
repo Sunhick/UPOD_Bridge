@@ -1,0 +1,29 @@
+<html ng-app="YPOD"></html>
+<head>
+  <title>YPOD</title>
+</head>
+<body ng-controller="MainController as ctrl">
+  <nav class="navbar navbar-inverse navbar-static-top">
+    <div class="container-fluid">
+      <div class="navbar-header"><a class="navbar-brand brand-title brandname">YPOD</a></div>
+      <div style="" class="navbar-collapse collapse">
+        <div ui-view="login"></div>
+      </div>
+    </div>
+  </nav>
+  <div ui-view></div>
+  <script src="bower_components/angular/angular.js"></script>
+  <!-- <script src="js/main.js"></script> -->
+  <script type="text/javascript" src="js/app.js"></script>
+  <script type="text/javascript" src="js/controllers/MainController.js"></script>
+  <script type="text/javascript" src="js/controllers/LoginModalController.js"></script>
+  <script type="text/javascript" src="bower_components/angular-ui-router/release/angular-ui-router.js"></script>
+  <script type="text/javascript" src="bower_components/angular-cookies/angular-cookies.js" />
+  <script src="js/main.js"></script>
+  <script src="bower_components/angular-bootstrap/ui-bootstrap-tpls.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Poiret+One"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.css"/>
+  <link rel="stylesheet" href="bower_components/font-awesome/css/font-awesome.css"/>
+</body>
+</html>

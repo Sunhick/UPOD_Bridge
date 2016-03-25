@@ -22,8 +22,35 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+var publicDir = path.join(__dirname, 'public');
 app.use('/', routes);
-app.use('/users', users);
+app.get('/', function(req, res){
+  res.sendFile(publicDir + '/index.html');
+});
+
+app.get('/authenticate', function(req, res){
+  // check header or url parameters or post parameters for token
+  var token = req.cookies['_xsrf'];
+  // decode token
+  if (token) {
+    // verifies secret and checks exp
+    jwt.verify(token, app.get('secret'), function(err, decoded) {
+      if (err) {
+        return res.json({ auth: 0 });
+      } else {
+        // if everything is good, save to request for use in other routes
+        return res.json({auth: 1});
+      }
+    });
+  } else {
+    return res.json({auth: 0});
+  }
+});
+
+app.get('/partials/:name', function(req, res){
+  var name = req.params.name;
+  res.render(name);
+});
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
