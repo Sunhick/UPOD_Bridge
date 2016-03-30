@@ -1,4 +1,5 @@
 <?PHP
+$uploaded = $_FILES['csv']['name'];
 if ($_FILES[csv][size] > 0) { 
 $hostname = "localhost";
 $username = "root";
@@ -13,13 +14,16 @@ $selectdatabase = mysql_select_db("ypod",$dbhandle)
 
 // Text File to read in
 $uploaded = $_FILES['csv']['name'];
-echo "->" . $uploaded;
+move_uploaded_file($_FILES["csv"]["tmp_name"],
+            "C:\Bitnami\wampstack-5.6.19-0\apache2\htdocs/" . $_FILES["csv"]["name"]);
 if (!empty($uploaded)) {
 	$query = "LOAD DATA LOCAL INFILE '" . $uploaded . "' INTO TABLE AQIQ_raw FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' IGNORE 1 LINES ";
-	echo $query;
 	mysql_query($query) 
 		or die('Error Loading Data File.<br>' . mysql_error());
-	//echo "Upload success!";
+	echo "Upload success!";
+	if (is_file($uploaded)) {
+		unlink($uploaded );
+	}
 }
 }
 ?>
