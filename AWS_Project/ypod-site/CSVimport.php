@@ -30,7 +30,7 @@ $requiredHeaders = array("Rtc Date","Rtc Time","BMP Temp(C)",
 
 $f = fopen($uploaded, 'r');
 $firstLine = fgets($f); //get first line of csv file
-//fclose($f)
+fclose($f);
 
 
 $foundHeaders = str_getcsv(trim($firstLine), ',', '"'); //parse to array
@@ -48,6 +48,53 @@ if (!empty($uploaded)) {
 	if (is_file($uploaded)) {
 		unlink($uploaded );
 	}
+
+	//Data processing to be addded here.
+	$processing = "INSERT INTO `aqiq_processed`(`userid`, `session_id`, `Rtc Date (GMT)`,
+	`Rtc Time (GMT)`,`BMP Temp(C)`,`BMP Pres(mb)`,`SHT25 Temp(C)`,`SHT25 Humidity`,
+	`CO2(ppm)`,`Wind Speed(mph)`,`Wind Direction(deg)`,`Quad-Aux1`,
+	`Quad-Main1`,`Quad-Aux2`,`Quad-Main2`,`Quad-Aux3`,`Quad-Main3`,
+	`Quad-Aux4`,`Quad-Main4`, `Fig 210 Heat`,`Fig 210 Sens`,`Fig 280 Heat`,
+	`Fig 280 Sens`,`BL Moccon`, `E2VO3(heat)`, `E2VO3(sens ppb)`, `GPS Date`,
+	`GPS Time(UTC)`,`Latitude`,`Longitude`, `Fix Quality`,
+	`Altitude(meters above sea level)`, `Satellites`)
+	SELECT `userid`,
+	`session_id`,
+	`Rtc Date`,
+	`Rtc Time`,
+	(`BMP Temp(C)`*9.0)/5.0 + 32,
+	`BMP Pres(mb)`,
+	`SHT25 Temp(C)`,
+	`SHT25 Humidity`,
+	`CO2 (ADC VAL)`,
+	`Wind Speed(mph)`,
+	`Wind Direction(deg)`,
+	`Quad-Aux-1(microVolts)`,
+	`Quad-Main-1(microVolts)`,
+	`Quad-Aux-2(microVolts)`,
+	`Quad-Main-2(microVolts)`,
+	`Quad-Aux-3(microVolts)`,
+	`Quad-Main-3(microVolts)`,
+	`Quad-Aux-4(microVolts)`,
+	`Quad-Main-4(microVolts)`,
+	`Fig 210 Heat(milliVolts)`,
+	`Fig 210 Sens(milliVolts)`,
+	`Fig 280 Heat(milliVolts)`,
+	`Fig 280 Sens(milliVolts)`,
+	`BL Moccon sens(milliVolts)`,
+	`E2VO3 Heat(milliVolts)`,
+	`E2VO3 Sens(milliVolts)`,
+	`GPS Date`,
+	`GPS Time (UTC)`,
+	`Latitude`, 
+	`Longitude`, 
+	`Fix Quality`, 
+	`Altitude(meters above sea level)`, 
+	`Satellites`
+
+	FROM `aqiq_raw`";
+	mysql_query($processing)
+		or die ('Error Loading Data File.<br>' . mysql_error());
 }
 }
 }
