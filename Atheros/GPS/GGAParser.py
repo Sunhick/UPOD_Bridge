@@ -57,7 +57,8 @@ class GGAParser(object):
         if not data:
             return data
 
-        time = int(data)
+        time = int(float(data))
+
         sec = time % 100
         time = int(time/100)
         mins = time % 100

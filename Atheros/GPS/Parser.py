@@ -29,6 +29,7 @@ class Parser(object):
         if id == '$GPGGA':
             gga = GGAParser()
             gga.parse(tokens)
+
             return gga
         if id == '$GPGSA':
             pass

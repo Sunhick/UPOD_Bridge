@@ -8,12 +8,14 @@
 #include <Adafruit_ADS1015.h>
 
 #define SerialStream 1
-#define GPS_used 0
-#define MetStation 0
-#define digitalSensors 0 //digital pins 3, 4, and 5 can be used for additional sensors.
-#define QuadStat  0 //auxillary 4-stat array, uses 2 MCP3424s
+#define GPS_used 1
+#define MetStation 1
+#define digitalSensors 1 //digital pins 3, 4, and 5 can be used for additional sensors.
+#define QuadStat  1 //auxillary 4-stat array, uses 2 MCP3424s
 //UPOD model indicator. Modify the 4th and 5th character to denote which UPOD you are using.
-#define model "UPODXY" 
+
+String ypodID = "YPODXX";
+String fileName;
 
 SoftwareSerial GPS(8, 9);
 RTC_DS3231 RTC;
@@ -85,6 +87,11 @@ void setup() {
   ads2.begin();
   pinMode(11, OUTPUT);
   pinMode(10, OUTPUT);
+
+  DateTime now = RTC.now();
+  fileName = ypodID + "_" + String(now.year()) + "_" + String(now.month()) + "_" + String(now.day());
+  Serial.println(fileName);
+
   
   #if digitalSensors
   pinMode(3, INPUT);
@@ -139,21 +146,20 @@ void loop() {
   Bridge.get("status", LEDstatus, 1);
   Serial.println(LEDstatus[0]);
   while (LEDstatus[0] == 'F' || LEDstatus[0] == 'N'){ //No SD or USB detected
+    digitalWrite(11,HIGH);
+    delay(250);
     #if SerialStream
     Serial.println("SD write unsuccessful. Check if SD is inserted properly.");
     #endif
     Bridge.get("status", LEDstatus, 1);
-    digitalWrite(10,HIGH); //figure out what pin corresponds to red led
-    digitalWrite(11,HIGH);
-    delay(10);
+    digitalWrite(11,LOW);
+    delay(250);
   }
   if (LEDstatus[0] == 'T'){ //SD detected, USB not detected
     //digitalWrite(10,HIGH); //figure out what pin corresponds to green led
-    digitalWrite(11,HIGH);
-    digitalWrite(10, HIGH);
+    digitalWrite(10,HIGH);
     delay(500);
     digitalWrite(10, LOW);
-    digitalWrite(11,LOW);
   }
   String data;
   //Get time from RTC
@@ -189,7 +195,7 @@ void loop() {
     P = -99;
   }
 
-  data += /*model[4] + model[5] + delimiter + */ String(now.unixtime()) + delimiter + T + delimiter + P + delimiter +
+  data += fileName + delimiter + ypodID + delimiter + String(now.unixtime()) + delimiter + T + delimiter + P + delimiter +
           temperature_SHT + delimiter + humidity_SHT + delimiter +
           String(getS300CO2()) + delimiter;
           
@@ -215,6 +221,15 @@ void loop() {
     else if (i <= 12) data += ads1.readADC_SingleEnded(i - 9) + delimiter;
     else if (i <= 16) data += ads2.readADC_SingleEnded(i - 13) + delimiter;
   }
+
+  #if digitalSensors
+  int digitalPin3 = digitalRead(3);
+  int digitalPin4 = digitalRead(4);
+  int digitalPin5 = digitalRead(5);
+  data += String(digitalPin3) + delimiter + String(digitalPin4) + delimiter + String(digitalPin5) + delimiter; 
+  #else if
+  data += delimiter + delimiter;
+  #endif
   
   #if GPS_used
   //Get GPS data
@@ -223,22 +238,11 @@ void loop() {
   if (millis() - timer > 2000) {
     timer = millis();
     if (gps_available) {
-      data += gps_data + delimiter;
+      data += gps_data;
       gps_data = "";
       gps_available = false;
     }
   }
-  #else if
-  data += delimiter;
-  #endif
-  
-  #if digitalSensors
-  int digitalPin3 = digitalRead(3);
-  int digitalPin4 = digitalRead(4);
-  int digitalPin5 = digitalRead(5);
-  data += String(digitalPin3) + delimiter + String(digitalPin4) + delimiter + String(digitalPin5); 
-  #else if
-  data += delimiter + delimiter;
   #endif
   
   #if SerialStream

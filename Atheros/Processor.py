@@ -28,7 +28,7 @@ global queue
 BUFFSIZE = 1000
 queue = Queue.Queue(BUFFSIZE)
 DELIMITER = '#'
-DATE_TIME = 0
+DATE_TIME = 2
 
 class DataProcessor(threading.Thread):
     """
@@ -78,7 +78,7 @@ class DataProcessor(threading.Thread):
             # sychronize Atheros system clock with ATMega
             self.sync_datetime(dt)
             #filename = datetime.fromtimestamp(dt).strftime('UPODXX%d%m%y.txt')
-            filename = 'UPODXX.txt'
+            filename = tokens[0] + '.txt'
             # self.log.info('Created file: {name}'.format(name=filename))
             self._file = TxtWriter(filename) # RotatingTxtWriter(filename)
 

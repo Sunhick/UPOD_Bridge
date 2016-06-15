@@ -24,7 +24,7 @@ class TxtWriter(object):
     
     def __init__(self, filename):
         # self.log = logging.getLogger(__name__)
-        self.header = ('Rtc Date', 'Rtc Time', 'BMP Temp(C)', 'BMP Pres(mb)',
+        self.header = ('YPOD ID', 'Rtc Date', 'Rtc Time', 'BMP Temp(C)', 'BMP Pres(mb)',
                        'SHT25 Temp(C)', 'SHT25 Humidity', 'CO2(ADC VAL)', 'Wind Speed(mph)',
                        'Wind Direction(deg)', 'Quad-Aux-1(microVolts)', 'Quad-Main-1(microVolts)',
                        'Quad-Aux-2(microVolts)','Quad-Main-2(microVolts)', 'Quad-Aux-3(microVolts)',
@@ -75,7 +75,8 @@ class TxtWriter(object):
 
         try:
             writer = csv.writer(stream)
-            writer.writerow((sensor.RtcDate,
+            writer.writerow((sensor.ypodID,
+            			  sensor.RtcDate,
                                   sensor.RtcTime,
                                   sensor.BmpTemperature,
                                   sensor.BmpPressure,
