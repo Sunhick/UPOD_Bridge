@@ -6,22 +6,38 @@
 #include <RTC_DS3231.h>
 #include <mcp3424.h>
 #include <Adafruit_ADS1015.h>
+#include <XBee.h>
 
 #define SerialStream 1
-#define GPS_used 1
-#define MetStation 1
-#define digitalSensors 1 //digital pins 3, 4, and 5 can be used for additional sensors.
-#define QuadStat  1 //auxillary 4-stat array, uses 2 MCP3424s
+
+#define GPS_used 0
+#define XBee_used 0
+#define MetStation 0
+#define digitalSensors 0 //digital pins 3, 4, and 5 can be used for additional sensors.
+#define QuadStat  0 //auxillary 4-stat array, uses 2 MCP3424s
 //UPOD model indicator. Modify the 4th and 5th character to denote which UPOD you are using.
 
-String ypodID = "YPODXX";
+String ypodID = "YPODA1";
 String fileName;
 
+#if GPS_used
 SoftwareSerial GPS(8, 9);
+#endif
+
+#if XBee_used
+XBee xbee = XBee();
+SoftwareSerial xbeeSerial(4,5);
+XBeeAddress64 addr64 = XBeeAddress64(0x0013a200, 0x40c84aab);
+//char ypod_data[] = "working"; 
+//ZBTxRequest zbTx = ZBTxRequest(addr64, (uint8_t *)ypod_data, sizeof(ypod_data));
+//ZBTxStatusResponse txStatus = ZBTxStatusResponse();
+#endif
+
 RTC_DS3231 RTC;
 
 //On-Board ADC instances and variables
 Adafruit_ADS1115 ads1;
+
 Adafruit_ADS1115 ads2(B1001001);
 int ADC1;
 
@@ -72,10 +88,17 @@ void wspeedIRQ()  {
 void setup() {
   #if SerialStream
   Serial.begin(9600);
+  Serial.println("1");
   #endif
   
   #if GPS_used
   GPS.begin(4800);
+  #endif
+
+
+  #if XBee_used
+  xbeeSerial.begin(9600);
+  xbee.setSerial(xbeeSerial);
   #endif
   
   Bridge.begin();
@@ -90,7 +113,7 @@ void setup() {
 
   DateTime now = RTC.now();
   fileName = ypodID + "_" + String(now.year()) + "_" + String(now.month()) + "_" + String(now.day());
-  Serial.println(fileName);
+  //Serial.println(fileName);
 
   
   #if digitalSensors
@@ -98,7 +121,7 @@ void setup() {
   pinMode(4, INPUT);
   pinMode(5, INPUT);
   #endif
-  
+
   #if QuadStat
   alpha_one.GetAddress('G', 'F'); //user defined address for the alphasense pstat array (4-stat)
   alpha_two.GetAddress('H', 'H') ;
@@ -228,7 +251,7 @@ void loop() {
   int digitalPin5 = digitalRead(5);
   data += String(digitalPin3) + delimiter + String(digitalPin4) + delimiter + String(digitalPin5) + delimiter; 
   #else if
-  data += delimiter + delimiter;
+  data += delimiter + delimiter + delimiter;
   #endif
   
   #if GPS_used
@@ -250,7 +273,18 @@ void loop() {
   #endif
   
   Bridge.put("TX-channel", data);
+
+  #if XBee_used
+  //Prepare the character array (the buffer) with one extra character for the null terminator.
+  char payload[data.length() + 1];
+  
+  //Copy data string into the character array.
+  data.toCharArray(payload, data.length() + 1);
  
+  ZBTxRequest zbTx = ZBTxRequest(addr64, (uint8_t *)payload, strlen(payload));
+  xbee.send(zbTx);
+  #endif
+  
   //QuadStat takes 11 seconds to sample. No need for delay in main loop
   #if QuadStat
   #else
