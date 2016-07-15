@@ -10,14 +10,14 @@
 
 #define SerialStream 1
 
-#define GPS_used 0
-#define XBee_used 0
-#define MetStation 0
+#define GPS_used 1
+#define XBee_used 1
+#define MetStation 1
 #define digitalSensors 0 //digital pins 3, 4, and 5 can be used for additional sensors.
-#define QuadStat  0 //auxillary 4-stat array, uses 2 MCP3424s
+#define QuadStat  1 //auxillary 4-stat array, uses 2 MCP3424s
 //UPOD model indicator. Modify the 4th and 5th character to denote which UPOD you are using.
 
-String ypodID = "YPODA1";
+String ypodID = "YPODA4";
 String fileName;
 
 #if GPS_used
