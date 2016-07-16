@@ -17,7 +17,7 @@
 #define QuadStat  1 //auxillary 4-stat array, uses 2 MCP3424s
 //UPOD model indicator. Modify the 4th and 5th character to denote which UPOD you are using.
 
-String ypodID = "YPODA4";
+String ypodID = "YPOD69";
 String fileName;
 
 #if GPS_used
