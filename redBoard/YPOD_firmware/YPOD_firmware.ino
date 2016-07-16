@@ -1,24 +1,24 @@
 #include <SPI.h>
 #include <Wire.h>
 #include <SoftwareSerial.h>
-#include <Bridge.h>
+#include <SD.h>
 #include <SFE_BMP180.h>
 #include <RTC_DS3231.h>
 #include <mcp3424.h>
 #include <Adafruit_ADS1015.h>
 #include <XBee.h>
 
-#define SerialStream 1
-
-#define GPS_used 1
-#define XBee_used 1
+#define SerialStream 0
+#define GPS_used 0 //if GPS used, XBee cannot be used.
+#define XBee_used 1 //if XBee used, GPS cannot be used.
 #define MetStation 1
-#define digitalSensors 0 //digital pins 3, 4, and 5 can be used for additional sensors.
 #define QuadStat  1 //auxillary 4-stat array, uses 2 MCP3424s
 //UPOD model indicator. Modify the 4th and 5th character to denote which UPOD you are using.
 
 String ypodID = "YPOD69";
-String fileName;
+//String fileName;
+const int chipSelect = 5;
+String data;  
 
 #if GPS_used
 SoftwareSerial GPS(8, 9);
@@ -26,11 +26,8 @@ SoftwareSerial GPS(8, 9);
 
 #if XBee_used
 XBee xbee = XBee();
-SoftwareSerial xbeeSerial(4,5);
+//SoftwareSerial xbeeSerial(2,3);
 XBeeAddress64 addr64 = XBeeAddress64(0x0013a200, 0x40c84aab);
-//char ypod_data[] = "working"; 
-//ZBTxRequest zbTx = ZBTxRequest(addr64, (uint8_t *)ypod_data, sizeof(ypod_data));
-//ZBTxStatusResponse txStatus = ZBTxStatusResponse();
 #endif
 
 RTC_DS3231 RTC;
@@ -40,7 +37,6 @@ Adafruit_ADS1115 ads1;
 
 Adafruit_ADS1115 ads2(B1001001);
 int ADC1;
-
 
 #if QuadStat
 //Quadstat ADC instances and variables
@@ -72,8 +68,7 @@ volatile long lastWindIRQ = 0;
 volatile byte windClicks = 0;
 #endif
 
-//Data delimieter for Bridge string
-String delimiter = "#";
+String delimiter = ",";
 
 #if MetStation
 // Function called anemometer interrupt (2 ticks per rotation), attached to input D4
@@ -86,41 +81,42 @@ void wspeedIRQ()  {
 #endif
 
 void setup() {
-  #if SerialStream
+
   Serial.begin(9600);
-  Serial.println("1");
-  #endif
-  
+
   #if GPS_used
   GPS.begin(4800);
   #endif
 
-
   #if XBee_used
-  xbeeSerial.begin(9600);
-  xbee.setSerial(xbeeSerial);
+  xbee.setSerial(Serial);
   #endif
   
-  Bridge.begin();
   Wire.begin();
   SPI.begin();
   RTC.begin();
   BMP.begin();
   ads1.begin();
   ads2.begin();
-  pinMode(11, OUTPUT);
+  pinMode(chipSelect, OUTPUT);
   pinMode(10, OUTPUT);
+  digitalWrite(10, LOW);
 
-  DateTime now = RTC.now();
-  fileName = ypodID + "_" + String(now.year()) + "_" + String(now.month()) + "_" + String(now.day());
-  //Serial.println(fileName);
-
-  
-  #if digitalSensors
-  pinMode(3, INPUT);
-  pinMode(4, INPUT);
-  pinMode(5, INPUT);
+  // see if the card is present and can be initialized:
+  if (!SD.begin(chipSelect)) {
+    #if SerialStream
+    Serial.println("Card failed, or not present");
+    // don't do anything more:
+    #endif
+    return;
+  }
+  #if SerialStream
+  Serial.println("card initialized.");
   #endif
+  
+  DateTime now = RTC.now();
+  //fileName = ypodID + "_" + String(now.year()) + "_" + String(now.month()) + "_" + String(now.day());
+  //Serial.println(fileName)
 
   #if QuadStat
   alpha_one.GetAddress('G', 'F'); //user defined address for the alphasense pstat array (4-stat)
@@ -165,26 +161,8 @@ SIGNAL(TIMER0_COMPA_vect) {
 #endif
 
 void loop() {
-  char LEDstatus[1] = {'N'};
-  Bridge.get("status", LEDstatus, 1);
-  Serial.println(LEDstatus[0]);
-  while (LEDstatus[0] == 'F' || LEDstatus[0] == 'N'){ //No SD or USB detected
-    digitalWrite(11,HIGH);
-    delay(250);
-    #if SerialStream
-    Serial.println("SD write unsuccessful. Check if SD is inserted properly.");
-    #endif
-    Bridge.get("status", LEDstatus, 1);
-    digitalWrite(11,LOW);
-    delay(250);
-  }
-  if (LEDstatus[0] == 'T'){ //SD detected, USB not detected
-    //digitalWrite(10,HIGH); //figure out what pin corresponds to green led
-    digitalWrite(10,HIGH);
-    delay(500);
-    digitalWrite(10, LOW);
-  }
-  String data;
+
+  data = "";
   //Get time from RTC
   DateTime now = RTC.now();
 
@@ -218,7 +196,7 @@ void loop() {
     P = -99;
   }
 
-  data += fileName + delimiter + ypodID + delimiter + String(now.unixtime()) + delimiter + T + delimiter + P + delimiter +
+  data += ypodID + delimiter + String(now.unixtime()) + delimiter + T + delimiter + P + delimiter +
           temperature_SHT + delimiter + humidity_SHT + delimiter +
           String(getS300CO2()) + delimiter;
           
@@ -245,15 +223,6 @@ void loop() {
     else if (i <= 16) data += ads2.readADC_SingleEnded(i - 13) + delimiter;
   }
 
-  #if digitalSensors
-  int digitalPin3 = digitalRead(3);
-  int digitalPin4 = digitalRead(4);
-  int digitalPin5 = digitalRead(5);
-  data += String(digitalPin3) + delimiter + String(digitalPin4) + delimiter + String(digitalPin5) + delimiter; 
-  #else if
-  data += delimiter + delimiter + delimiter;
-  #endif
-  
   #if GPS_used
   //Get GPS data
   // if millis() or timer wraps around, we'll just reset it
@@ -267,13 +236,28 @@ void loop() {
     }
   }
   #endif
-  
   #if SerialStream
   Serial.println(data);
   #endif
   
-  Bridge.put("TX-channel", data);
-
+  // open the file. note that only one file can be open at a time,
+  // so you have to close this one before opening another.
+  // this opens the file and appends to the end of file
+  // if the file does not exist, this will create a new file.
+  File dataFile = SD.open("datalog.txt", FILE_WRITE);
+  // if the file is available, write to it:
+  if (dataFile) {  
+    dataFile.print(data);
+    dataFile.println(); //create a new row to read data more clearly
+    dataFile.close();   //close file
+  }
+  // if the file isn't open, pop up an error:
+  else  {
+    #if SerialStream
+    Serial.println("error opening datalog.txt");
+    #endif
+  }
+  
   #if XBee_used
   //Prepare the character array (the buffer) with one extra character for the null terminator.
   char payload[data.length() + 1];
@@ -284,7 +268,7 @@ void loop() {
   ZBTxRequest zbTx = ZBTxRequest(addr64, (uint8_t *)payload, strlen(payload));
   xbee.send(zbTx);
   #endif
-  
+ 
   //QuadStat takes 11 seconds to sample. No need for delay in main loop
   #if QuadStat
   #else
