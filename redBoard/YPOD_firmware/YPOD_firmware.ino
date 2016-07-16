@@ -1,22 +1,23 @@
 #include <SPI.h>
 #include <Wire.h>
 #include <SoftwareSerial.h>
-#include <SD.h>
+#include <SdFat.h>
 #include <SFE_BMP180.h>
 #include <RTC_DS3231.h>
 #include <mcp3424.h>
 #include <Adafruit_ADS1015.h>
 #include <XBee.h>
 
-#define SerialStream 0
+#define SerialStream 1
 #define GPS_used 0 //if GPS used, XBee cannot be used.
-#define XBee_used 1 //if XBee used, GPS cannot be used.
+#define XBee_used 0 //if XBee used, GPS cannot be used.
 #define MetStation 1
 #define QuadStat  1 //auxillary 4-stat array, uses 2 MCP3424s
 //UPOD model indicator. Modify the 4th and 5th character to denote which UPOD you are using.
 
 String ypodID = "YPOD69";
-//String fileName;
+char fileName[16] = "ypod69420.csv";
+
 const int chipSelect = 5;
 String data;  
 
@@ -31,6 +32,9 @@ XBeeAddress64 addr64 = XBeeAddress64(0x0013a200, 0x40c84aab);
 #endif
 
 RTC_DS3231 RTC;
+
+SdFat sd;
+SdFile file;
 
 //On-Board ADC instances and variables
 Adafruit_ADS1115 ads1;
@@ -100,20 +104,26 @@ void setup() {
   ads2.begin();
   pinMode(chipSelect, OUTPUT);
   pinMode(10, OUTPUT);
-  digitalWrite(10, LOW);
 
-  // see if the card is present and can be initialized:
-  if (!SD.begin(chipSelect)) {
+  while (!sd.begin(chipSelect)) {
     #if SerialStream
-    Serial.println("Card failed, or not present");
-    // don't do anything more:
+    Serial.println("insert sd card to begin");
     #endif
-    return;
+    sd.begin(chipSelect);
   }
-  #if SerialStream
-  Serial.println("card initialized.");
-  #endif
   
+  digitalWrite(10, LOW);
+  
+  while(!file.open(fileName, O_CREAT | O_APPEND | O_WRITE)){
+      Serial.println("can't open file");
+      file.open(fileName, O_CREAT | O_APPEND | O_WRITE);
+  }
+  
+  if (file.open(fileName, O_CREAT | O_APPEND | O_WRITE)){;  // open file in write mode and append data to the end of file
+    file.println("Working");    // Print header to file
+    file.close();    // close file - very important
+  }
+
   DateTime now = RTC.now();
   //fileName = ypodID + "_" + String(now.year()) + "_" + String(now.month()) + "_" + String(now.day());
   //Serial.println(fileName)
@@ -236,28 +246,27 @@ void loop() {
     }
   }
   #endif
-  #if SerialStream
-  Serial.println(data);
-  #endif
   
-  // open the file. note that only one file can be open at a time,
-  // so you have to close this one before opening another.
-  // this opens the file and appends to the end of file
-  // if the file does not exist, this will create a new file.
-  File dataFile = SD.open("datalog.txt", FILE_WRITE);
-  // if the file is available, write to it:
-  if (dataFile) {  
-    dataFile.print(data);
-    dataFile.println(); //create a new row to read data more clearly
-    dataFile.close();   //close file
+  while(!sd.begin(chipSelect)){
+      Serial.println("error in loop");
+      sd.begin(chipSelect);
   }
-  // if the file isn't open, pop up an error:
-  else  {
+  
+  digitalWrite(10, LOW);
+  
+  if (sd.begin(chipSelect))   // very important - reinitialize SD card on the SPI bus
+  {
+    digitalWrite(10, HIGH);
+    file.open(fileName, O_WRITE | O_AT_END);  // open file in write mode
+    file.println(data);
     #if SerialStream
-    Serial.println("error opening datalog.txt");
+    Serial.println(data);
     #endif
+    file.close();
+    delay(250);
+    digitalWrite(10,LOW);
   }
-  
+
   #if XBee_used
   //Prepare the character array (the buffer) with one extra character for the null terminator.
   char payload[data.length() + 1];
@@ -275,6 +284,8 @@ void loop() {
   delay(2000);
   #endif
 }
+
+
 
 float getS300CO2()  {
   int i = 1;
