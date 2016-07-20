@@ -8,18 +8,17 @@
 #include <Adafruit_ADS1015.h>
 #include <XBee.h>
 
-#define SerialStream 1
+#define SerialStream 0
 #define GPS_used 0 //if GPS used, XBee cannot be used.
-#define XBee_used 0 //if XBee used, GPS cannot be used.
+#define XBee_used 1 //if XBee used, GPS cannot be used.
 #define MetStation 1
 #define QuadStat  1 //auxillary 4-stat array, uses 2 MCP3424s
+
 //UPOD model indicator. Modify the 4th and 5th character to denote which UPOD you are using.
-
-String ypodID = "YPOD69";
-char fileName[16] = "ypod69420.csv";
-
+String ypodID = "YPODA1";
+char fileNameArray[sizeof(ypodID)];
+String data;
 const int chipSelect = 5;
-String data;  
 
 #if GPS_used
 SoftwareSerial GPS(8, 9);
@@ -105,28 +104,29 @@ void setup() {
   pinMode(chipSelect, OUTPUT);
   pinMode(10, OUTPUT);
 
+  DateTime now = RTC.now();
+  String fileName = ypodID + "_" + String(now.year()) + "_" + String(now.month()) + "_" + String(now.day()) + ".csv";
+  char fileNameArray[fileName.length()+1];
+  fileName.toCharArray(fileNameArray, sizeof(fileNameArray)); //Well damn, that function is nice.
+  
   while (!sd.begin(chipSelect)) {
     #if SerialStream
     Serial.println("insert sd card to begin");
     #endif
     sd.begin(chipSelect);
   }
-  
+
   digitalWrite(10, LOW);
   
-  while(!file.open(fileName, O_CREAT | O_APPEND | O_WRITE)){
+  while(!file.open(fileNameArray, O_CREAT | O_APPEND | O_WRITE)){
       Serial.println("can't open file");
-      file.open(fileName, O_CREAT | O_APPEND | O_WRITE);
+      file.open(fileNameArray, O_CREAT | O_APPEND | O_WRITE);
   }
   
-  if (file.open(fileName, O_CREAT | O_APPEND | O_WRITE)){;  // open file in write mode and append data to the end of file
+  if (file.open(fileNameArray, O_CREAT | O_APPEND | O_WRITE)){;  // open file in write mode and append data to the end of file
     file.println("Working");    // Print header to file
     file.close();    // close file - very important
   }
-
-  DateTime now = RTC.now();
-  //fileName = ypodID + "_" + String(now.year()) + "_" + String(now.month()) + "_" + String(now.day());
-  //Serial.println(fileName)
 
   #if QuadStat
   alpha_one.GetAddress('G', 'F'); //user defined address for the alphasense pstat array (4-stat)
@@ -144,6 +144,7 @@ void setup() {
   GPS.println("$PTNLSNM,0001,02");//AddreGPS for RMC and GGA outputs. "$PTNLSNM,0101,02"
   #endif
 }
+
 #if GPS_used
 void useInterrupt(boolean v) {
   if (v) {
@@ -257,7 +258,7 @@ void loop() {
   if (sd.begin(chipSelect))   // very important - reinitialize SD card on the SPI bus
   {
     digitalWrite(10, HIGH);
-    file.open(fileName, O_WRITE | O_AT_END);  // open file in write mode
+    file.open(fileNameArray, O_WRITE | O_AT_END);  // open file in write mode
     file.println(data);
     #if SerialStream
     Serial.println(data);
@@ -270,15 +271,13 @@ void loop() {
   #if XBee_used
   //Prepare the character array (the buffer) with one extra character for the null terminator.
   char payload[data.length() + 1];
-  
   //Copy data string into the character array.
   data.toCharArray(payload, data.length() + 1);
- 
   ZBTxRequest zbTx = ZBTxRequest(addr64, (uint8_t *)payload, strlen(payload));
   xbee.send(zbTx);
   #endif
  
-  //QuadStat takes 11 seconds to sample. No need for delay in main loop
+  //QuadStat takes ~11 seconds to sample. No need for delay in main loop
   #if QuadStat
   #else
   delay(2000);
