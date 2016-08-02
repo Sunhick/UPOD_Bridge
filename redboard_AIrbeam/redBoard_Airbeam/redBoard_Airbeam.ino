@@ -10,11 +10,15 @@
 #define SerialStream 0
 #define GPS_used 1
 #define MetStation 0
-#define QuadStat  1 //auxillary 4-stat array, uses 2 MCP3424s
+#define QuadStat  0 //auxillary 4-stat array, uses 2 MCP3424s
+#define airbeam 1
 
 /*****UPOD model indicator. Modify the 4th and 5th character to denote which UPOD you are using.*****/
 String ypodID = "YPODA4";
 String fileName;
+
+char airbeamChar;
+String airbeamData;
 
 word setFileName = 1;
 
@@ -77,9 +81,7 @@ void wspeedIRQ()  {
 #endif
 
 void setup() {
-  #if SerialStream
   Serial.begin(9600);
-  #endif
   #if GPS_used
   GPS.begin(4800);
   #endif
@@ -106,12 +108,12 @@ void setup() {
   }
 
   digitalWrite(10, LOW);
-  /*
+ /*
   //Open file and write header
   file.open(fileNameArray, O_CREAT | O_APPEND | O_WRITE);
   file.println("ID,Date,Time,bmpTemp,bmpPres,shtTemp,shtHum,CO2,windSpeed,windDir,Quad_Aux1,Quad_Main1,Quad_Aux2,Quad_Main2,Quad_Aux3,Quad_Main3,Quad_Aux4,Quad_Main4,Fig210_Heat,Fig210_Sens,Fig280_Heat,Fig280_Sens,blMocon,NULL,E2VO3_Heat,E2VO3_Sens,GPS");    // Print header to file
   file.close();    // close file - very important
-  */
+*/
   #if QuadStat
   alpha_one.GetAddress('G', 'F'); //user defined address for the alphasense pstat array (4-stat)
   alpha_two.GetAddress('H', 'H') ;
@@ -239,6 +241,21 @@ void loop() {
   data.replace("\r",""); // GPS adds carriage return, newline. We need to strip it from data before printing to file.
   #endif
   
+  data+=delimiter;
+  #if airbeam
+  while(Serial.available()){
+    airbeamChar = Serial.read();
+    if(airbeamChar == '\n'){
+      data += airbeamData;
+      airbeamData = "";
+      break;
+    }
+    else{
+      airbeamData.concat(airbeamChar);
+    }
+  }
+  #endif
+  
   while(!sd.begin(chipSelect)){
       #if SerialStream
       Serial.println("error in loop");
@@ -265,7 +282,7 @@ void loop() {
   //QuadStat takes ~11 seconds to sample. No need for delay in main loop
   #if QuadStat
   #else
-  delay(2000);
+  delay(3000);
   #endif
 }
 
